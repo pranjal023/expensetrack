@@ -1,0 +1,56 @@
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+}
+
+.checkout-container {
+  width: 350px;
+  margin: 80px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}
+
+.checkout-container h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.checkout-container form {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkout-container label {
+  margin-bottom: 15px;
+}
+
+.checkout-container input {
+  padding: 10px;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.checkout-container button {
+  padding: 10px;
+  background-color: #28a745;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.checkout-container button:hover {
+  background-color: #218838;
+}
+
+.message {
+  margin-top: 15px;
+  font-weight: bold;
+  color: red;
+  text-align: center;
+}

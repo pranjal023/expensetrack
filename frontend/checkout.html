@@ -1,0 +1,38 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout - Expense Tracker</title>
+    <link rel="stylesheet" href="css/checkout.css" />
+</head>
+<body>
+    <div class="checkout-container">
+        <h1>Upgrade to Premium</h1>
+        <form id="paymentForm">
+            <label>
+                Amount (INR):
+                <input type="number" id="amount" value="500" readonly />
+            </label>
+            <label>
+                Card Number (dummy):
+                <input type="text" id="CardNumber" placeholder="1234 5678 9012 " required />
+            </label>
+            <label>
+                Expiry Date:
+                <input type="text" id="expiryDate" placeholder="MM/YY" required />
+            </label>
+            <label>
+                CVV:
+                <input type="text" id="cvv" placeholder="123" required />
+            </label>
+            <button type="submit">Pay</button>
+        </form>
+        <div id="paymentMessage" class="message"></div>
+    </div>
+
+    <script src="js/checkout.js"></script>
+</body>
+</html>
