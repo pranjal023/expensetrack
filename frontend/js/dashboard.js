@@ -1,41 +1,31 @@
-const BACKEND_URL = 'http://localhost:3000'; 
+import { apiGet, apiPost, apiDelete } from './api.js';
 
 let currentPage = 1;
 const ITEMS_PER_PAGE = 10;
 
-
 async function fetchUserProfile() {
-  const res = await fetch(`${BACKEND_URL}/api/auth/profile`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Not authenticated');
-  const data = await res.json();
+  const data = await apiGet('/api/auth/profile');
   if (!data.success || !data.user) throw new Error('Not authenticated');
   return data.user;
 }
-function renderPagination(pagination) {
+
+function renderPagination({ page, totalPages }) {
   const paginationDiv = document.getElementById('pagination');
-  paginationDiv.innerHTML = ''; 
-
-  const { page, totalPages } = pagination;
-
+  paginationDiv.innerHTML = '';
   if (totalPages <= 1) {
-    paginationDiv.style.display = 'none'; 
+    paginationDiv.style.display = 'none';
     return;
-  } else {
-    paginationDiv.style.display = 'flex'; 
   }
+  paginationDiv.style.display = 'flex';
 
-  
   const prevBtn = document.createElement('button');
   prevBtn.textContent = 'Prev';
   prevBtn.disabled = page <= 1;
   prevBtn.addEventListener('click', () => fetchExpenses(page - 1));
   paginationDiv.appendChild(prevBtn);
 
-  
   let startPage = Math.max(1, page - 2);
   let endPage = Math.min(totalPages, page + 2);
-
-  
   if (page <= 3) endPage = Math.min(5, totalPages);
   if (page > totalPages - 3) startPage = Math.max(1, totalPages - 4);
 
@@ -47,7 +37,6 @@ function renderPagination(pagination) {
     paginationDiv.appendChild(pageBtn);
   }
 
-  
   const nextBtn = document.createElement('button');
   nextBtn.textContent = 'Next';
   nextBtn.disabled = page >= totalPages;
@@ -55,11 +44,9 @@ function renderPagination(pagination) {
   paginationDiv.appendChild(nextBtn);
 }
 
-
 async function checkPremiumStatusAndShowDownload() {
   try {
     const user = await fetchUserProfile();
-
     document.getElementById('usernameDisplay').textContent = user.username;
     if (user.isPremium) {
       document.getElementById('premiumSection').style.display = 'none';
@@ -71,16 +58,14 @@ async function checkPremiumStatusAndShowDownload() {
       document.getElementById('leaderboardSection').style.display = 'none';
       document.getElementById('downloadBtn').style.display = 'none';
     }
-  } catch (e) {
+  } catch {
     window.location.href = 'login.html';
   }
 }
 
 async function downloadExpensesCSV() {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/expenses`, { credentials: 'include' });
-    const result = await response.json();
-
+    const result = await apiGet('/api/expenses?page=1&limit=1000');
     if (!result.success || !result.expenses.length) {
       alert('No expenses available for download.');
       return;
@@ -89,7 +74,7 @@ async function downloadExpensesCSV() {
     const expenses = result.expenses;
     let csv = 'Amount,Category,Description,Date\n';
     expenses.forEach(e => {
-      const desc = e.description ? e.description.replace(/"/g,'""') : '';
+      const desc = e.description?.replace(/"/g,'""') || '';
       csv += `"${e.amount}","${e.category}","${desc}","${e.expense_date}"\n`;
     });
 
@@ -100,7 +85,7 @@ async function downloadExpensesCSV() {
     a.download = 'expenses.csv';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Failed to download expenses:', error);
@@ -111,7 +96,7 @@ async function downloadExpensesCSV() {
 document.getElementById('downloadBtn').addEventListener('click', downloadExpensesCSV);
 
 async function logout() {
-  await fetch(`${BACKEND_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+  await apiPost('/api/auth/logout');
   window.location.href = 'login.html';
 }
 
@@ -119,8 +104,7 @@ document.getElementById('logoutBtn').addEventListener('click', logout);
 
 async function fetchExpenses(page = 1, limit = ITEMS_PER_PAGE) {
   currentPage = page;
-  const res = await fetch(`${BACKEND_URL}/api/expenses?page=${page}&limit=${limit}`, { credentials: 'include' });
-  const data = await res.json();
+  const data = await apiGet(`/api/expenses?page=${page}&limit=${limit}`);
   if (data.success) {
     populateExpenses(data.expenses);
     renderPagination(data.pagination);
@@ -141,14 +125,29 @@ function populateExpenses(expenses) {
     div.className = 'expense-item';
     div.innerHTML = `
       <div>
-        <strong>${expense.category}</strong> - ₹${Number(expense.amount).toFixed(2)}  on ${expense.expense_date} <br/>
+        <strong>${expense.category}</strong> - ₹${Number(expense.amount).toFixed(2)} on ${expense.expense_date}<br/>
         <small>${expense.description || ''}</small>
       </div>
       <div class="expense-controls">
-        <button onclick="deleteExpense(${expense.id})">Delete</button>
+        <button data-id="${expense.id}" class="delete-btn">Delete</button>
       </div>
     `;
     container.appendChild(div);
+  });
+
+  // Attach delete handlers
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      if (!confirm('Are you sure you want to delete this expense?')) return;
+      const result = await apiDelete(`/api/expenses/${id}`);
+      if (result.success) {
+        fetchExpenses(currentPage);
+        loadLeaderboard();
+      } else {
+        alert(result.message || 'Failed to delete expense.');
+      }
+    });
   });
 }
 
@@ -160,24 +159,19 @@ async function addExpense(event) {
   const description = document.getElementById('description').value.trim();
   const messageDiv = document.getElementById('expenseMessage');
   messageDiv.textContent = '';
+
   if (!amount || !category || !expenseDate) {
     messageDiv.textContent = 'Amount, category and date are required.';
     return;
   }
-  const res = await fetch(`${BACKEND_URL}/api/expenses`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ amount, category, description, expense_date: expenseDate })
-  });
-  const data = await res.json();
+
+  const data = await apiPost('/api/expenses', { amount, category, description, expense_date: expenseDate });
   if (data.success) {
     messageDiv.style.color = 'green';
     messageDiv.textContent = 'Expense added successfully!';
     document.getElementById('expenseForm').reset();
-    
     fetchExpenses(currentPage);
-     loadLeaderboard();
+    loadLeaderboard();
   } else {
     messageDiv.style.color = 'red';
     messageDiv.textContent = data.message || 'Failed to add expense.';
@@ -186,42 +180,29 @@ async function addExpense(event) {
 
 document.getElementById('expenseForm').addEventListener('submit', addExpense);
 
-window.deleteExpense = async function(id) {
-  if (!confirm('Are you sure you want to delete this expense?')) return;
-  const res = await fetch(`${BACKEND_URL}/api/expenses/${id}`, { method: 'DELETE', credentials: 'include' });
-  const data = await res.json();
-  if (data.success) {
-    fetchExpenses(currentPage);
-    loadLeaderboard();
-  } else {
-    alert(data.message || 'Failed to delete expense.');
-  }
-};
-
 document.getElementById('upgradeBtn').addEventListener('click', () => {
   window.location.href = 'checkout.html';
 });
 
 async function loadLeaderboard() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/leaderboard`, { credentials: 'include' });
-    const data = await res.json();
+    const data = await apiGet('/api/leaderboard');
+    const lb = document.getElementById('leaderboard');
+    lb.innerHTML = '';
     if (data.success && data.leaderboard?.length) {
-      const leaderboard = document.getElementById('leaderboard');
-      leaderboard.innerHTML = '';
       data.leaderboard.forEach((user, idx) => {
         const div = document.createElement('div');
         div.className = 'leaderboard-item';
         div.innerHTML = `
-          <div>#${idx+1}</div>
+          <div>#${idx + 1}</div>
           <div>${user.username}</div>
           <div>₹${Number(user.total_spent).toFixed(2)}</div>
           <div>${user.total_expenses}</div>
         `;
-        leaderboard.appendChild(div);
+        lb.appendChild(div);
       });
     } else {
-      document.getElementById('leaderboard').innerHTML = '<em>No data</em>';
+      lb.innerHTML = '<em>No data</em>';
     }
   } catch (error) {
     console.error('Failed to load leaderboard:', error);

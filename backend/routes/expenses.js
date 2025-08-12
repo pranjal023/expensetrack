@@ -1,25 +1,34 @@
 const express = require('express');
-const pool = require('../config/database'); 
+const pool = require('../config/database');
 const Expense = require('../models/Expense');
-const router  = express.Router();
+const { ensureAuthenticated } = require('../middleware/auth');
 
-// GET /api/expenses?page=1&limit=10  — paginated fetching of expenses
+const router = express.Router();
+
+
+router.use(ensureAuthenticated);
+
+
 router.get('/', async (req, res) => {
   const userId = req.session.userId;
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 10; // default 10 per page
+  const limit = parseInt(req.query.limit, 10) || 10;
   const offset = (page - 1) * limit;
 
   try {
-    // Get total expense count for the user
+    // Total count
     const [[{ count }]] = await pool.query(
-      'SELECT COUNT(*) as count FROM expenses WHERE user_id = ?',
+      'SELECT COUNT(*) AS count FROM expenses WHERE user_id = ?',
       [userId]
     );
 
-    //  expenses for the current page with limit and offset
+    // Page data
     const [expenses] = await pool.query(
-      'SELECT id, amount, category, description, expense_date FROM expenses WHERE user_id = ? ORDER BY expense_date DESC LIMIT ? OFFSET ?',
+      `SELECT id, amount, category, description, expense_date
+       FROM expenses
+       WHERE user_id = ?
+       ORDER BY expense_date DESC
+       LIMIT ? OFFSET ?`,
       [userId, limit, offset]
     );
 
@@ -30,8 +39,8 @@ router.get('/', async (req, res) => {
         page,
         limit,
         total: count,
-        totalPages: Math.ceil(count / limit),
-      },
+        totalPages: Math.ceil(count / limit)
+      }
     });
   } catch (err) {
     console.error('Error fetching expenses:', err);
@@ -39,11 +48,17 @@ router.get('/', async (req, res) => {
   }
 });
 
-// add new expense 
+
 router.post('/', async (req, res) => {
-  const { amount, category, description, expense_date } = req.body;
+  const { amount, category, description = '', expense_date } = req.body;
+  const userId = req.session.userId;
+
+  if (!amount || !category || !expense_date) {
+    return res.status(400).json({ success: false, message: 'Amount, category, and date are required.' });
+  }
+
   try {
-    await Expense.create(req.session.userId, amount, category, description || '', expense_date);
+    await Expense.create(userId, amount, category, description, expense_date);
     res.json({ success: true, message: 'Expense added successfully.' });
   } catch (err) {
     console.error('Error adding expense:', err);
@@ -51,10 +66,16 @@ router.post('/', async (req, res) => {
   }
 });
 
-//  delete expense 
+
 router.delete('/:id', async (req, res) => {
+  const expenseId = req.params.id;
+  const userId = req.session.userId;
+
   try {
-    await Expense.delete(req.params.id, req.session.userId);
+    const deleted = await Expense.delete(expenseId, userId);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Expense not found or not authorized.' });
+    }
     res.json({ success: true, message: 'Expense deleted successfully.' });
   } catch (err) {
     console.error('Error deleting expense:', err);

@@ -1,39 +1,43 @@
+// Get API base from environment variable or default to localhost for dev
+const API_BASE_URL = 
+  window?.env?.REACT_APP_API_URL ||           // If using injected config
+  (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) || 
+  "http://localhost:3000";                    // Fallback for local dev
 
-
-async function apiGet(url) {
-  const res = await fetch(url, { credentials: 'same-origin' });
-  if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`);
+async function apiGet(path) {
+  const res = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
   return await res.json();
 }
 
-async function apiPost(url, data) {
-  const res = await fetch(url, {
+async function apiPost(path, data) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
+    credentials: 'include',
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`POST ${url} failed: ${res.status}`);
+  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
   return await res.json();
 }
 
-async function apiPut(url, data) {
-  const res = await fetch(url, {
+async function apiPut(path, data) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
+    credentials: 'include',
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`PUT ${url} failed: ${res.status}`);
+  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status}`);
   return await res.json();
 }
 
-async function apiDelete(url) {
-  const res = await fetch(url, {
+async function apiDelete(path) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     method: 'DELETE',
-    credentials: 'same-origin',
+    credentials: 'include',
   });
-  if (!res.ok) throw new Error(`DELETE ${url} failed: ${res.status}`);
+  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
   return await res.json();
 }
 

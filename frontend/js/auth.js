@@ -1,15 +1,12 @@
+import { apiPost } from './api.js';
 
-
-const BACKEND_URL = 'http://localhost:3000'; 
-
-
+// Handle signup form submission
 async function handleSignup(event) {
   event.preventDefault();
 
   const username = document.getElementById('username').value.trim();
   const email    = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-
   const messageDiv = document.getElementById('signupMessage');
   messageDiv.textContent = '';
   messageDiv.style.color = 'red';
@@ -20,20 +17,7 @@ async function handleSignup(event) {
   }
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password }),
-      credentials: 'include' 
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => null);
-      messageDiv.textContent = errorData?.message || `Signup failed with status ${res.status}`;
-      return;
-    }
-
-    const data = await res.json();
+    const data = await apiPost('/api/auth/signup', { username, email, password });
 
     if (data.success) {
       messageDiv.style.color = 'green';
@@ -46,17 +30,16 @@ async function handleSignup(event) {
     }
   } catch (error) {
     console.error('Signup error:', error);
-    messageDiv.textContent = 'Network or server error occurred. Please try again.';
+    messageDiv.textContent = error.message || 'Network or server error occurred. Please try again.';
   }
 }
 
-
+// Handle login form submission
 async function handleLogin(event) {
   event.preventDefault();
 
   const email    = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-
   const messageDiv = document.getElementById('loginMessage');
   messageDiv.textContent = '';
   messageDiv.style.color = 'red';
@@ -67,20 +50,7 @@ async function handleLogin(event) {
   }
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-      credentials: 'include'
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => null);
-      messageDiv.textContent = errorData?.message || `Login failed with status ${res.status}`;
-      return;
-    }
-
-    const data = await res.json();
+    const data = await apiPost('/api/auth/login', { email, password });
 
     if (data.success) {
       messageDiv.style.color = 'green';
@@ -93,15 +63,17 @@ async function handleLogin(event) {
     }
   } catch (error) {
     console.error('Login error:', error);
-    messageDiv.textContent = 'Network or server error occurred. Please try again.';
+    messageDiv.textContent = error.message || 'Network or server error occurred. Please try again.';
   }
 }
 
-
-if (document.getElementById('signupForm')) {
-  document.getElementById('signupForm').addEventListener('submit', handleSignup);
+// Attach event listeners
+const signupForm = document.getElementById('signupForm');
+if (signupForm) {
+  signupForm.addEventListener('submit', handleSignup);
 }
 
-if (document.getElementById('loginForm')) {
-  document.getElementById('loginForm').addEventListener('submit', handleLogin);
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+  loginForm.addEventListener('submit', handleLogin);
 }
