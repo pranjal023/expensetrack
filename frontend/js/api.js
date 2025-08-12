@@ -1,8 +1,5 @@
-// Get API base from environment variable or default to localhost for dev
-const API_BASE_URL = 
-  window?.env?.REACT_APP_API_URL ||           // If using injected config
-  (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) || 
-  "http://localhost:3000";                    // Fallback for local dev
+// Use your EC2 backend URL
+const API_BASE_URL = "http://98.81.164.72"; // change to your domain if you get one
 
 async function apiGet(path) {
   const res = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include' });
